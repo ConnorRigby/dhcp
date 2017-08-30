@@ -11,7 +11,7 @@ defmodule DHCPServer.Mixfile do
         "ERTS_DIR" => "#{:code.root_dir()}/erts-#{:erlang.system_info(:version)}/"
       },
       make_clean: ["clean"],
-      erlc_options: [{:parse_transform, :lager_transform}],
+      erlc_options: [{:parse_transform}],
       build_embedded: Mix.env == :prod,
       start_permanent: Mix.env == :prod,
       deps: deps()
@@ -20,7 +20,7 @@ defmodule DHCPServer.Mixfile do
 
   def application do
     [
-      mod: {:dhcp_server_app, []},
+      mod: {DHCPServer.Application, []},
       applications: [:kernel, :logger]
     ]
   end
