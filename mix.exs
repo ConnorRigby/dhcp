@@ -7,20 +7,14 @@ defmodule Dhcp.Mixfile do
       version: "0.0.1",
       elixir: "~> 1.4",
       compilers: Mix.compilers ++ [:elixir_make],
-      make_cwd: "c_src",
       make_env: %{
-        "CFLAGS" => "-O2 -I#{:code.root_dir()}/erts-#{:erlang.system_info(:version)}/include"
+        "ERTS_DIR" => "#{:code.root_dir()}/erts-#{:erlang.system_info(:version)}/"
       },
+      make_clean: ["clean"],
       erlc_options: [{:parse_transform, :lager_transform}],
       build_embedded: Mix.env == :prod,
       start_permanent: Mix.env == :prod,
       deps: deps()
-    ]
-  end
-
-  def application do
-    [
-      extra_applications: []
     ]
   end
 

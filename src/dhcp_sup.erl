@@ -63,7 +63,15 @@ init([]) ->
 %% Internal functions
 %%====================================================================
 get_config() ->
-  Env = 'Elixir.Application':get_all_env(dhcp),
-  'Elixir.IO':inspect(Env),
-  % {ok, NetNameSpace, Interface, ServerId, NextServer, LeaseFile, Subnets, Hosts};
-  {error, no_conf}.
+  case application:get_env(dhcp, config) of
+    {ok, Terms} ->
+      NetNameSpace = proplists:get_value(netns,       Terms),
+      Interface =    proplists:get_value(interface,   Terms),
+      ServerId =     proplists:get_value(server_id,   Terms, {0, 0, 0, 0}),
+      NextServer =   proplists:get_value(next_server, Terms, {0, 0, 0, 0}),
+      LeaseFile =    proplists:get_value(lease_file,  Terms, ?DHCP_LEASEFILE),
+      Subnets =      [X || X <- Terms, is_record(X, subnet)],
+      Hosts =        [X || X <- Terms, is_record(X, host)],
+      {ok, NetNameSpace, Interface, ServerId, NextServer, LeaseFile, Subnets, Hosts};
+    {error, Reason} -> {error, Reason}
+  end.
