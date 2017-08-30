@@ -5,7 +5,7 @@
 %%%
 %%% Created : 20 Sep 2006 by Ruslan Babayev <ruslan@babayev.com>
 %%%-------------------------------------------------------------------
--module(dhcp_alloc).
+-module(dhcp_server_alloc).
 
 -behaviour(gen_server).
 
@@ -17,8 +17,8 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
 	 terminate/2, code_change/3]).
 
--include("dhcp.hrl").
--include("dhcp_alloc.hrl").
+-include("dhcp_server.hrl").
+-include("dhcp_server_alloc.hrl").
 
 -define(SERVER, ?MODULE).
 -define(ADDRESS, dhcp_address).
@@ -26,9 +26,9 @@
 
 -define(DHCPOFFER_TIMEOUT, 3*60*1000).
 
--define(IS_ALLOCATED(A), A#address.status == allocated). 
--define(IS_OFFERED(A), A#address.status == offered). 
--define(IS_AVAILABLE(A), A#address.status == available). 
+-define(IS_ALLOCATED(A), A#address.status == allocated).
+-define(IS_OFFERED(A), A#address.status == offered).
+-define(IS_AVAILABLE(A), A#address.status == available).
 -define(IS_DECLINED(A), A#address.status == declined).
 
 -define(IS_NOT_EXPIRED(L, Now), L#lease.expires > Now).
@@ -60,11 +60,11 @@ verify(ClientId, Gateway, IP) ->
 
 extend(ClientId, IP) ->
     gen_server:call(?SERVER, {extend, ClientId, IP}).
-    
+
 local_conf(Gateway) ->
     gen_server:call(?SERVER, {local_conf, Gateway}).
 
-decline(ClientId, IP) ->    
+decline(ClientId, IP) ->
     gen_server:call(?SERVER, {decline, ClientId, IP}).
 
 %%====================================================================

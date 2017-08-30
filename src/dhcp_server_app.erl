@@ -1,11 +1,11 @@
 %%%-------------------------------------------------------------------
 %%% File    : dhcp_app.erl
 %%% Author  : Ruslan Babayev <ruslan@babayev.com>
-%%% Description : 
+%%% Description :
 %%%
 %%% Created : 20 Sep 2006 by Ruslan Babayev <ruslan@babayev.com>
 %%%-------------------------------------------------------------------
--module(dhcp_app).
+-module(dhcp_server_app).
 
 -behaviour(application).
 
@@ -26,13 +26,10 @@
 %% top supervisor of the tree.
 %%--------------------------------------------------------------------
 start(_Type, _StartArgs) ->
-    lager:set_loglevel(lager_console_backend, debug),
-    case dhcp_sup:start_link() of
-	{ok, Pid} ->
-	    {ok, Pid};
-	Error ->
-	    Error
-    end.
+  case dhcp_server_sup:start_link() of
+    {ok, Pid} -> {ok, Pid};
+    Error -> Error
+  end.
 
 %%--------------------------------------------------------------------
 %% Function: stop(State) -> void()

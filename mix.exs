@@ -1,9 +1,9 @@
-defmodule Dhcp.Mixfile do
+defmodule DHCPServer.Mixfile do
   use Mix.Project
 
   def project do
     [
-      app: :dhcp,
+      app: :dhcp_server,
       version: "0.0.1",
       elixir: "~> 1.4",
       compilers: Mix.compilers ++ [:elixir_make],
@@ -18,10 +18,16 @@ defmodule Dhcp.Mixfile do
     ]
   end
 
+  def application do
+    [
+      mod: {:dhcp_server_app, []},
+      applications: [:kernel, :logger]
+    ]
+  end
+
   def deps do
     [
       {:elixir_make, "~> 0.4", runtime: false},
-      {:lager, ">= 2.1.0", manager: :rebar3}
     ]
   end
 end

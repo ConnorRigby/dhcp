@@ -1,5 +1,5 @@
--ifndef(_DHCP_ALLOC).
--define(_DHCP_ALLOC, true).
+-ifndef(_DHCP_SERVER_ALLOC).
+-define(_DHCP_SERVER_ALLOC, true).
 
 -record(subnet,	{network, netmask, range, options}).
 -record(host, {id, ip}).

@@ -1,5 +1,5 @@
--ifndef(_DHCP).
--define(_DHCP, true).
+-ifndef(_DHCP_SERVER).
+-define(_DHCP_SERVER, true).
 
 %%% BOOTP (rfc951) message types
 -define(BOOTREQUEST, 1).
@@ -13,10 +13,10 @@
 -define(HTYPE_IEEE802, 6).    %% IEEE 802.2 Token Ring
 -define(HTYPE_FDDI,    8).    %% FDDI
 
-%%% Magic cookie validating dhcp options and bootp vendor extensions field
+%%% Magic cookie validating dhcp_server options and bootp vendor extensions field
 -define(DHCP_OPTIONS_COOKIE, [99, 130, 83, 99]).
 
--record(dhcp, {
+-record(dhcp_server, {
 	  op,                       %% Message opcode
 	  htype   = ?HTYPE_ETHER,   %% Hardware addr type
 	  hlen    = 6,              %% Hardware addr length

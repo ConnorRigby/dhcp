@@ -5,13 +5,13 @@
 %%%
 %%% Created : 17 Apr 2006 by Ruslan Babayev <ruslan@babayev.com>
 %%%-------------------------------------------------------------------
--module(dhcp_lib).
+-module(dhcp_server_lib).
 
 %% API
 -export([decode/1, encode/1]).
 -export([ip_to_binary/1, eth_to_binary/1]).
 -import(lists, [keymember/3, keysearch/3, keyreplace/4]).
--include("dhcp.hrl").
+-include("dhcp_server.hrl").
 
 %%====================================================================
 %% API
@@ -30,7 +30,7 @@ decode(<<Op, Htype, Hlen, Hops,  Xid:32, Secs:16, Flags:16,
 		   _ -> %% return empty list if the MAGIC is not there
 		       []
 	       end,
-    #dhcp{op      = Op,
+    #dhcp_server{op      = Op,
 	  htype   = Htype,
 	  hlen    = Hlen,
 	  hops    = Hops,
@@ -46,22 +46,22 @@ decode(<<Op, Htype, Hlen, Hops,  Xid:32, Secs:16, Flags:16,
 	  file    = binary_to_list(File),
 	  options = OptsList}.
 
-encode(D) when is_record(D, dhcp) ->
-    Op      = D#dhcp.op,
-    Htype   = D#dhcp.htype,
-    Hlen    = D#dhcp.hlen,
-    Hops    = D#dhcp.hops,
-    Xid     = D#dhcp.xid,
-    Secs    = D#dhcp.secs,
-    Flags   = D#dhcp.flags,
-    Ciaddr  = ip_to_binary(D#dhcp.ciaddr),
-    Yiaddr  = ip_to_binary(D#dhcp.yiaddr),
-    Siaddr  = ip_to_binary(D#dhcp.siaddr),
-    Giaddr  = ip_to_binary(D#dhcp.giaddr),
-    Chaddr  = pad(eth_to_binary(D#dhcp.chaddr), 16),
-    Sname   = pad(list_to_binary(D#dhcp.sname), 64),
-    File    = pad(list_to_binary(D#dhcp.file), 128),
-    Opts    = options_to_binary(D#dhcp.options),
+encode(D) when is_record(D, dhcp_server) ->
+    Op      = D#dhcp_server.op,
+    Htype   = D#dhcp_server.htype,
+    Hlen    = D#dhcp_server.hlen,
+    Hops    = D#dhcp_server.hops,
+    Xid     = D#dhcp_server.xid,
+    Secs    = D#dhcp_server.secs,
+    Flags   = D#dhcp_server.flags,
+    Ciaddr  = ip_to_binary(D#dhcp_server.ciaddr),
+    Yiaddr  = ip_to_binary(D#dhcp_server.yiaddr),
+    Siaddr  = ip_to_binary(D#dhcp_server.siaddr),
+    Giaddr  = ip_to_binary(D#dhcp_server.giaddr),
+    Chaddr  = pad(eth_to_binary(D#dhcp_server.chaddr), 16),
+    Sname   = pad(list_to_binary(D#dhcp_server.sname), 64),
+    File    = pad(list_to_binary(D#dhcp_server.file), 128),
+    Opts    = options_to_binary(D#dhcp_server.options),
     <<Op, Htype, Hlen, Hops, Xid:32, Secs:16, Flags:16,
      Ciaddr/binary, Yiaddr/binary, Siaddr/binary, Giaddr/binary,
      Chaddr/binary, Sname/binary, File/binary, Opts/binary>>.
@@ -136,7 +136,7 @@ binary_to_options(<<Tag, Rest/binary>>, Acc) ->
 options_to_binary(Options) ->
     L = [<<(option_to_binary(Tag, Val))/binary>> || {Tag, Val} <- Options],
     list_to_binary(?DHCP_OPTIONS_COOKIE ++ L ++ [?DHO_END]).
-   
+
 option_to_binary(Tag, Val) ->
     case type(Tag) of
 	byte ->

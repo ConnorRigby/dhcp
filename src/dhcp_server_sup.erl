@@ -5,7 +5,7 @@
 %%%
 %%% Created : 20 Sep 2006 by Ruslan Babayev <ruslan@babayev.com>
 %%%-------------------------------------------------------------------
--module(dhcp_sup).
+-module(dhcp_server_sup).
 
 -behaviour(supervisor).
 
@@ -17,7 +17,7 @@
 
 -import(lists, [keysearch/3, filter/2]).
 
--include("dhcp_alloc.hrl").
+-include("dhcp_server_alloc.hrl").
 
 -define(SERVER, ?MODULE).
 -define(DHCP_LEASEFILE, "/var/run/dhcp_leases.dets").
@@ -45,16 +45,16 @@ start_link() ->
 %% specifications.
 %%--------------------------------------------------------------------
 init([]) ->
-    lager:info("Starting supervisor."),
     case get_config() of
         {ok, NetNameSpace, Interface, ServerId, NextServer, LeaseFile, Subnets, Hosts} ->
             DHCPServer = {dhcp_server, {dhcp_server, start_link,
                                         [NetNameSpace, Interface, ServerId, NextServer]},
                           permanent, 2000, worker, [dhcp_server]},
-            DHCPAlloc = {dhcp_alloc, {dhcp_alloc, start_link,
+            DHCPAlloc = {dhcp_server_alloc, {dhcp_server_alloc, start_link,
                                       [LeaseFile, Subnets, Hosts]},
-                         permanent, 2000, worker, [dhcp_alloc]},
+                         permanent, 2000, worker, [dhcp_server_alloc]},
             {ok, {{one_for_one, 0, 1}, [DHCPServer, DHCPAlloc]}};
+        undefined -> {ok, {{one_for_one, 0, 1}, []}};
         {error, Reason} ->
             {error, Reason}
     end.
@@ -63,7 +63,8 @@ init([]) ->
 %% Internal functions
 %%====================================================================
 get_config() ->
-  case application:get_env(dhcp, config) of
+  case application:get_env(dhcp_server, config) of
+    undefined -> undefined;
     {ok, Terms} ->
       NetNameSpace = proplists:get_value(netns,       Terms),
       Interface =    proplists:get_value(interface,   Terms),
