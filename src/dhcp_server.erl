@@ -36,6 +36,7 @@ init() ->
     %% load our nif library
     case erlang:load_nif(filename:join(LibDir, "dhcp_server"), 0) of
         ok ->
+						lager:debug("loaded nif."),
             ok;
         {error, {reload, _}} ->
             ok;

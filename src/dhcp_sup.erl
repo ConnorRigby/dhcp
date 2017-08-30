@@ -45,6 +45,7 @@ start_link() ->
 %% specifications.
 %%--------------------------------------------------------------------
 init([]) ->
+    lager:info("Starting supervisor."),
     case get_config() of
         {ok, NetNameSpace, Interface, ServerId, NextServer, LeaseFile, Subnets, Hosts} ->
             DHCPServer = {dhcp_server, {dhcp_server, start_link,
@@ -62,20 +63,7 @@ init([]) ->
 %% Internal functions
 %%====================================================================
 get_config() ->
-    ConfDir = case code:priv_dir(dhcp) of
-		  PrivDir when is_list(PrivDir) -> PrivDir;
-                  {error, _Reason} -> "."
-              end,
-    case file:consult(filename:join(ConfDir, "dhcp.conf")) of
-        {ok, Terms} ->
-	    NetNameSpace = proplists:get_value(netns,       Terms),
-	    Interface =    proplists:get_value(interface,   Terms),
-            ServerId =     proplists:get_value(server_id,   Terms, {0, 0, 0, 0}),
-            NextServer =   proplists:get_value(next_server, Terms, {0, 0, 0, 0}),
-            LeaseFile =    proplists:get_value(lease_file,  Terms, ?DHCP_LEASEFILE),
-            Subnets =      [X || X <- Terms, is_record(X, subnet)],
-            Hosts =        [X || X <- Terms, is_record(X, host)],
-            {ok, NetNameSpace, Interface, ServerId, NextServer, LeaseFile, Subnets, Hosts};
-        {error, Reason} ->
-	    {error, Reason}
-    end.
+  Env = 'Elixir.Application':get_all_env(dhcp),
+  'Elixir.IO':inspect(Env),
+  % {ok, NetNameSpace, Interface, ServerId, NextServer, LeaseFile, Subnets, Hosts};
+  {error, no_conf}.
