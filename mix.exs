@@ -4,7 +4,7 @@ defmodule DHCPServer.Mixfile do
   def project do
     [
       app: :dhcp_server,
-      version: "0.1.1",
+      version: "0.1.2",
       elixir: "~> 1.4",
       compilers: Mix.compilers ++ [:elixir_make],
       package: package(),
@@ -39,7 +39,7 @@ defmodule DHCPServer.Mixfile do
 
   defp package do
     [
-      files: ["lib", "priv", "mix.exs", "README*", "COPYING", "src", "c_src"],
+      files: ["lib", "priv", "mix.exs", "README*", "COPYING", "src", "c_src", "Makefile"],
       maintainers: ["Connor Rigby"],
       licenses: ["GPLv2"],
       links: %{"GitHub" => "https://github.com/nerves-project/dhcp_server"}
