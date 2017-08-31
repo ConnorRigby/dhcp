@@ -31,7 +31,7 @@ defmodule  DHCPServer.Worker do
   def init(config) do
     interface = :proplists.get_value(:interface, config)
     # im so sorry.
-    {:subnet, gateway, netmask, _range, [_, _, _, {_, domain}, {_, name_servers}, _]} = Enum.find(config, fn(f) -> match?({:subnet, _, _, _, _}, f) end)
+    {:subnet, _, netmask, _range, [_, _, {_, [gateway]}, {_, domain}, {_, name_servers}, _]} = Enum.find(config, fn(f) -> match?({:subnet, _, _, _, _}, f) end)
     @interface_handler.setup(interface, [ipv4_address_method: :static, ipv4_address: ip_bin(gateway), ipv4_subnet_mask: ip_bin(netmask), domain: to_string(domain), nameservers: ip_bin(name_servers)])
     Logger.debug "DHCPServer setting up #{interface}"
     {:ok, interface}
