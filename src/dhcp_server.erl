@@ -75,8 +75,8 @@ init([NetNameSpace, Interface, ServerId, NextServer]) ->
 			server_id = ServerId,
 			next_server = NextServer}};
 	{error, Reason} ->
-	    'Elixir.DHCPServer.Logger':debug("Cannot open udp port ~w",
-				   [?DHCP_SERVER_PORT]),
+	    'Elixir.DHCPServer.Logger':debug(io_lib:format("Cannot open udp port ~w",
+				   [?DHCP_SERVER_PORT])),
 	    {stop, Reason}
     end.
 
@@ -121,7 +121,7 @@ handle_info({udp, Socket, IP, Port, Packet}, State = #state{socket = Socket}) ->
 		{error, Reason} ->
 		    'Elixir.DHCPServer.Logger':debug(Reason);
 		Other ->
-		    'Elixir.DHCPServer.Logger':debug("DHCP result: ~w", [Other])
+		    'Elixir.DHCPServer.Logger':debug(io_lib:format("DHCP result: ~w", [Other]))
 	    end;
 	false ->
 	    ok
@@ -156,8 +156,8 @@ code_change(_OldVsn, State, _Extra) ->
 %%% The DHCP message handler
 %%%-------------------------------------------------------------------
 handle_dhcp_server(?DHCPDISCOVER, D, State) ->
-    'Elixir.DHCPServer.Logger':debug("DHCPDISCOVER from ~s ~s ~s",
-			  [fmt_clientid(D), fmt_hostname(D), fmt_gateway(D)]),
+    'Elixir.DHCPServer.Logger':debug(io_lib:format("DHCPDISCOVER from ~s ~s ~s",
+			  [fmt_clientid(D), fmt_hostname(D), fmt_gateway(D)])),
     ClientId = get_client_id(D),
     Gateway = D#dhcp_server.giaddr,
     RequestedIP = get_requested_ip(D),
@@ -169,8 +169,8 @@ handle_dhcp_server(?DHCPDISCOVER, D, State) ->
     end;
 handle_dhcp_server(?DHCPREQUEST, D, State) ->
     ClientId = get_client_id(D),
-    'Elixir.DHCPServer.Logger':debug("DHCPREQUEST from ~s ~s ~s",
-			  [fmt_clientid(D), fmt_hostname(D), fmt_gateway(D)]),
+    'Elixir.DHCPServer.Logger':debug(io_lib:format("DHCPREQUEST from ~s ~s ~s",
+			  [fmt_clientid(D), fmt_hostname(D), fmt_gateway(D)])),
     case client_state(D) of
 	{selecting, ServerId} ->
 	    case {ServerId, State#state.server_id} of
@@ -192,8 +192,8 @@ handle_dhcp_server(?DHCPREQUEST, D, State) ->
 		{ok, IP, Options} ->
 		    ack(D, IP, Options, State);
 		noclient ->
-		    'Elixir.DHCPServer.Logger':debug("Client ~s has no current bindings",
-					   [fmt_clientid(D)]),
+		    'Elixir.DHCPServer.Logger':debug(io_lib:format("Client ~s has no current bindings",
+					   [fmt_clientid(D)])),
 		    ok;
 		{error, Reason} ->
 		    nak(D, Reason, State)
@@ -208,19 +208,19 @@ handle_dhcp_server(?DHCPREQUEST, D, State) ->
     end;
 handle_dhcp_server(?DHCPDECLINE, D, _State) ->
     IP = get_requested_ip(D),
-    'Elixir.DHCPServer.Logger':debug("DHCPDECLINE of ~s from ~s ~s",
-			  [fmt_ip(IP), fmt_clientid(D), fmt_hostname(D)]),
+    'Elixir.DHCPServer.Logger':debug(io_lib:format("DHCPDECLINE of ~s from ~s ~s",
+			  [fmt_ip(IP), fmt_clientid(D), fmt_hostname(D)])),
     dhcp_server_alloc:decline(IP);
 handle_dhcp_server(?DHCPRELEASE, D, _State) ->
     ClientId = get_client_id(D),
-    'Elixir.DHCPServer.Logger':debug("DHCPRELEASE of ~s from ~s ~s ~s",
+    'Elixir.DHCPServer.Logger':debug(io_lib:format("DHCPRELEASE of ~s from ~s ~s ~s",
 			  [fmt_ip(D#dhcp_server.ciaddr), fmt_clientid(D),
-			   fmt_hostname(D), fmt_gateway(D)]),
+			   fmt_hostname(D), fmt_gateway(D)])),
     dhcp_server_alloc:release(ClientId, D#dhcp_server.ciaddr);
 handle_dhcp_server(?DHCPINFORM, D, State) ->
     Gateway = D#dhcp_server.giaddr,
     IP = D#dhcp_server.ciaddr,
-    'Elixir.DHCPServer.Logger':debug("DHCPINFORM from ~s", [fmt_ip(IP)]),
+    'Elixir.DHCPServer.Logger':debug(io_lib:format("DHCPINFORM from ~s", [fmt_ip(IP)])),
     case dhcp_server_alloc:local_conf(Gateway) of
 	{ok, Opts} ->
 	    %% No Lease Time (RFC2131 sec. 4.3.5)
@@ -230,7 +230,7 @@ handle_dhcp_server(?DHCPINFORM, D, State) ->
 	    Other
     end;
 handle_dhcp_server(MsgType, _D, _State) ->
-    'Elixir.DHCPServer.Logger':debug("Invalid DHCP message type ~p", [MsgType]),
+    'Elixir.DHCPServer.Logger':debug(io_lib:format("Invalid DHCP message type ~p", [MsgType])),
     ok.
 
 client_state(D) when is_record(D, dhcp_server) ->
@@ -262,9 +262,9 @@ reply(MsgType, D, Opts, #state{server_id = ServerId}) ->
 			 Opts]}}.
 
 offer(D, IP, Options, State = #state{next_server = NextServer}) ->
-    'Elixir.DHCPServer.Logger':debug("DHCPOFFER on ~s to ~s ~s ~s",
+    'Elixir.DHCPServer.Logger':debug(io_lib:format("DHCPOFFER on ~s to ~s ~s ~s",
 	       [fmt_ip(IP), fmt_clientid(D),
-		fmt_hostname(D), fmt_gateway(D)]),
+		fmt_hostname(D), fmt_gateway(D)])),
     reply(?DHCPOFFER, D#dhcp_server{ciaddr = ?INADDR_ANY,
 			     yiaddr = IP,
 			     siaddr = NextServer
@@ -272,9 +272,9 @@ offer(D, IP, Options, State = #state{next_server = NextServer}) ->
 	  Options, State).
 
 ack(D, IP, Options, State = #state{next_server = NextServer}) ->
-    'Elixir.DHCPServer.Logger':debug("DHCPACK on ~s to ~s ~s ~s",
+    'Elixir.DHCPServer.Logger':debug(io_lib:format("DHCPACK on ~s to ~s ~s ~s",
 			  [fmt_ip(IP), fmt_clientid(D),
-			   fmt_hostname(D), fmt_gateway(D)]),
+			   fmt_hostname(D), fmt_gateway(D)])),
 
     reply(?DHCPACK, D#dhcp_server{yiaddr = IP,
 			   siaddr = NextServer
@@ -282,9 +282,9 @@ ack(D, IP, Options, State = #state{next_server = NextServer}) ->
 	  Options, State).
 
 nak(D, Reason, State) ->
-    'Elixir.DHCPServer.Logger':debug("DHCPNAK to ~s ~s ~s. ~s",
+    'Elixir.DHCPServer.Logger':debug(io_lib:format("DHCPNAK to ~s ~s ~s. ~s",
 			  [fmt_clientid(D), fmt_hostname(D),
-			   fmt_gateway(D), Reason]),
+			   fmt_gateway(D), Reason])),
     reply(?DHCPNAK, D#dhcp_server{ciaddr = ?INADDR_ANY,
 			   yiaddr = ?INADDR_ANY,
 			   siaddr = ?INADDR_ANY,
@@ -294,14 +294,14 @@ nak(D, Reason, State) ->
 
 send_reply(Source, MsgType, Reply, State) ->
     {DstIP, DstPort} = get_dest(Source, MsgType, Reply, State),
-    'Elixir.DHCPServer.Logger':debug("Sending DHCP Reply to: ~s:~w", [fmt_ip(DstIP), DstPort]),
+    'Elixir.DHCPServer.Logger':debug(io_lib:format("Sending DHCP Reply to: ~s:~w", [fmt_ip(DstIP), DstPort])),
     gen_udp:send(State#state.socket, DstIP, DstPort, dhcp_server_lib:encode(Reply)).
 
 arp_inject_nif(_IfName, _IP, _Type, _Addr, _FD) -> error(nif_not_loaded).
 
 arp_inject(IP, Type, Addr, #state{if_name = IfName, socket = Socket}) ->
     {ok, FD} = inet:getfd(Socket),
-    'Elixir.DHCPServer.Logger':debug("FD: ~w", [FD]),
+    'Elixir.DHCPServer.Logger':debug(io_lib:format("FD: ~w", [FD])),
     arp_inject_nif(IfName, dhcp_server_lib:ip_to_binary(IP), Type, dhcp_server_lib:eth_to_binary(Addr), FD).
 
 %%% Behaviour is described in RFC2131 sec. 4.1

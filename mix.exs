@@ -20,14 +20,14 @@ defmodule DHCPServer.Mixfile do
 
   def application do
     [
-      mod: {DHCPServer.Application, []},
-      applications: [:kernel, :logger]
+      applications: [:logger, :nerves_network]
     ]
   end
 
   def deps do
     [
       {:elixir_make, "~> 0.4", runtime: false},
+      {:nerves_network, ">= 0.0.0"}
     ]
   end
 end
