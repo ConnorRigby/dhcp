@@ -28,7 +28,7 @@
 
 -record(state, {if_name, socket, server_id, next_server}).
 
--define(is_broadcast(D), (is_record(D, dhcp_server) andalso (D#dhcp_server.flags bsr 15) == 1)).
+-define(is_broadcast(D), (is_record(D, dhcp_msg) andalso (D#dhcp_msg.flags bsr 15) == 1)).
 
 init() ->
     LibDir = filename:join([filename:dirname(code:which(?MODULE)), "..", "priv"]),
@@ -113,7 +113,7 @@ handle_info({udp, Socket, IP, Port, Packet}, State = #state{socket = Socket}) ->
     Request = dhcp_server_lib:decode(Packet),
     case optsearch(?DHO_DHCP_MESSAGE_TYPE, Request) of
 	{value, MsgType} ->
-	    case handle_dhcp_server(MsgType, Request, State) of
+	    case handle_dhcp(MsgType, Request, State) of
 		ok ->
 		    ok;
 		{reply, Reply} ->
@@ -155,11 +155,11 @@ code_change(_OldVsn, State, _Extra) ->
 %%%-------------------------------------------------------------------
 %%% The DHCP message handler
 %%%-------------------------------------------------------------------
-handle_dhcp_server(?DHCPDISCOVER, D, State) ->
+handle_dhcp(?DHCPDISCOVER, D, State) ->
     'Elixir.DHCPServer.Logger':debug(io_lib:format("DHCPDISCOVER from ~s ~s ~s",
 			  [fmt_clientid(D), fmt_hostname(D), fmt_gateway(D)])),
     ClientId = get_client_id(D),
-    Gateway = D#dhcp_server.giaddr,
+    Gateway = D#dhcp_msg.giaddr,
     RequestedIP = get_requested_ip(D),
     case dhcp_server_alloc:reserve(ClientId, Gateway, RequestedIP) of
 	{ok, IP, Options} ->
@@ -167,7 +167,7 @@ handle_dhcp_server(?DHCPDISCOVER, D, State) ->
 	Other ->
 	    Other
     end;
-handle_dhcp_server(?DHCPREQUEST, D, State) ->
+handle_dhcp(?DHCPREQUEST, D, State) ->
     ClientId = get_client_id(D),
     'Elixir.DHCPServer.Logger':debug(io_lib:format("DHCPREQUEST from ~s ~s ~s",
 			  [fmt_clientid(D), fmt_hostname(D), fmt_gateway(D)])),
@@ -187,7 +187,7 @@ handle_dhcp_server(?DHCPREQUEST, D, State) ->
 		    ok
 	    end;
 	{init_reboot, RequestedIP} ->
-	    Gateway = D#dhcp_server.giaddr,
+	    Gateway = D#dhcp_msg.giaddr,
 	    case dhcp_server_alloc:verify(ClientId, Gateway, RequestedIP) of
 		{ok, IP, Options} ->
 		    ack(D, IP, Options, State);
@@ -206,20 +206,20 @@ handle_dhcp_server(?DHCPREQUEST, D, State) ->
 		    nak(D, Reason, State)
 	    end
     end;
-handle_dhcp_server(?DHCPDECLINE, D, _State) ->
+handle_dhcp(?DHCPDECLINE, D, _State) ->
     IP = get_requested_ip(D),
     'Elixir.DHCPServer.Logger':debug(io_lib:format("DHCPDECLINE of ~s from ~s ~s",
 			  [fmt_ip(IP), fmt_clientid(D), fmt_hostname(D)])),
     dhcp_server_alloc:decline(IP);
-handle_dhcp_server(?DHCPRELEASE, D, _State) ->
+handle_dhcp(?DHCPRELEASE, D, _State) ->
     ClientId = get_client_id(D),
     'Elixir.DHCPServer.Logger':debug(io_lib:format("DHCPRELEASE of ~s from ~s ~s ~s",
-			  [fmt_ip(D#dhcp_server.ciaddr), fmt_clientid(D),
+			  [fmt_ip(D#dhcp_msg.ciaddr), fmt_clientid(D),
 			   fmt_hostname(D), fmt_gateway(D)])),
-    dhcp_server_alloc:release(ClientId, D#dhcp_server.ciaddr);
-handle_dhcp_server(?DHCPINFORM, D, State) ->
-    Gateway = D#dhcp_server.giaddr,
-    IP = D#dhcp_server.ciaddr,
+    dhcp_server_alloc:release(ClientId, D#dhcp_msg.ciaddr);
+handle_dhcp(?DHCPINFORM, D, State) ->
+    Gateway = D#dhcp_msg.giaddr,
+    IP = D#dhcp_msg.ciaddr,
     'Elixir.DHCPServer.Logger':debug(io_lib:format("DHCPINFORM from ~s", [fmt_ip(IP)])),
     case dhcp_server_alloc:local_conf(Gateway) of
 	{ok, Opts} ->
@@ -229,11 +229,11 @@ handle_dhcp_server(?DHCPINFORM, D, State) ->
 	Other ->
 	    Other
     end;
-handle_dhcp_server(MsgType, _D, _State) ->
+handle_dhcp(MsgType, _D, _State) ->
     'Elixir.DHCPServer.Logger':debug(io_lib:format("Invalid DHCP message type ~p", [MsgType])),
     ok.
 
-client_state(D) when is_record(D, dhcp_server) ->
+client_state(D) when is_record(D, dhcp_msg) ->
     case optsearch(?DHO_DHCP_SERVER_IDENTIFIER, D) of
 	{value, ServerId} ->
 	    {selecting, ServerId};
@@ -244,16 +244,16 @@ client_state(D) when is_record(D, dhcp_server) ->
 		false ->
 		    case ?is_broadcast(D) of
 			false ->
-			    {renewing, D#dhcp_server.ciaddr};
+			    {renewing, D#dhcp_msg.ciaddr};
 			_ ->
-			    {rebinding, D#dhcp_server.ciaddr}
+			    {rebinding, D#dhcp_msg.ciaddr}
 		    end
 	    end
     end.
 
 -define(reply(DHCP), {reply, DHCP}).
 reply(MsgType, D, Opts, #state{server_id = ServerId}) ->
-    {reply, D#dhcp_server{
+    {reply, D#dhcp_msg{
 	      op = ?BOOTREPLY,
 	      hops = 0,
 	      secs = 0,
@@ -265,7 +265,7 @@ offer(D, IP, Options, State = #state{next_server = NextServer}) ->
     'Elixir.DHCPServer.Logger':debug(io_lib:format("DHCPOFFER on ~s to ~s ~s ~s",
 	       [fmt_ip(IP), fmt_clientid(D),
 		fmt_hostname(D), fmt_gateway(D)])),
-    reply(?DHCPOFFER, D#dhcp_server{ciaddr = ?INADDR_ANY,
+    reply(?DHCPOFFER, D#dhcp_msg{ciaddr = ?INADDR_ANY,
 			     yiaddr = IP,
 			     siaddr = NextServer
 			    },
@@ -276,7 +276,7 @@ ack(D, IP, Options, State = #state{next_server = NextServer}) ->
 			  [fmt_ip(IP), fmt_clientid(D),
 			   fmt_hostname(D), fmt_gateway(D)])),
 
-    reply(?DHCPACK, D#dhcp_server{yiaddr = IP,
+    reply(?DHCPACK, D#dhcp_msg{yiaddr = IP,
 			   siaddr = NextServer
 			  },
 	  Options, State).
@@ -285,10 +285,10 @@ nak(D, Reason, State) ->
     'Elixir.DHCPServer.Logger':debug(io_lib:format("DHCPNAK to ~s ~s ~s. ~s",
 			  [fmt_clientid(D), fmt_hostname(D),
 			   fmt_gateway(D), Reason])),
-    reply(?DHCPNAK, D#dhcp_server{ciaddr = ?INADDR_ANY,
+    reply(?DHCPNAK, D#dhcp_msg{ciaddr = ?INADDR_ANY,
 			   yiaddr = ?INADDR_ANY,
 			   siaddr = ?INADDR_ANY,
-			   flags = D#dhcp_server.flags bor 16#8000  %% set broadcast bit
+			   flags = D#dhcp_msg.flags bor 16#8000  %% set broadcast bit
 			  },
 	  [{?DHO_DHCP_MESSAGE, Reason}], State).
 
@@ -306,16 +306,16 @@ arp_inject(IP, Type, Addr, #state{if_name = IfName, socket = Socket}) ->
 
 %%% Behaviour is described in RFC2131 sec. 4.1
 get_dest(Source = {SrcIP, SrcPort}, MsgType, Reply, State)
-  when is_record(Reply, dhcp_server) ->
-    if Reply#dhcp_server.giaddr =/= ?INADDR_ANY ->
+  when is_record(Reply, dhcp_msg) ->
+    if Reply#dhcp_msg.giaddr =/= ?INADDR_ANY ->
 	    'Elixir.DHCPServer.Logger':debug("get_dest: #1"),
-	    {Reply#dhcp_server.giaddr, ?DHCP_SERVER_PORT};
+	    {Reply#dhcp_msg.giaddr, ?DHCP_SERVER_PORT};
 
-       Reply#dhcp_server.ciaddr =/= ?INADDR_ANY ->
+       Reply#dhcp_msg.ciaddr =/= ?INADDR_ANY ->
 	    'Elixir.DHCPServer.Logger':debug("get_dest: #2"),
-	    if (MsgType =/= ?DHCPINFORM andalso SrcIP =/= Reply#dhcp_server.ciaddr)
+	    if (MsgType =/= ?DHCPINFORM andalso SrcIP =/= Reply#dhcp_msg.ciaddr)
 	       orelse SrcIP == ?INADDR_ANY orelse SrcPort == 0 ->
-		    {Reply#dhcp_server.ciaddr, ?DHCP_CLIENT_PORT};
+		    {Reply#dhcp_msg.ciaddr, ?DHCP_CLIENT_PORT};
 	       true ->
 		    Source
 	    end;
@@ -324,33 +324,33 @@ get_dest(Source = {SrcIP, SrcPort}, MsgType, Reply, State)
 	    'Elixir.DHCPServer.Logger':debug("get_dest: #3"),
 	    {?INADDR_BROADCAST, ?DHCP_CLIENT_PORT};
 
-       Reply#dhcp_server.yiaddr =/= ?INADDR_ANY ->
+       Reply#dhcp_msg.yiaddr =/= ?INADDR_ANY ->
 	    'Elixir.DHCPServer.Logger':debug("get_dest: #4"),
-	    arp_inject(Reply#dhcp_server.yiaddr, Reply#dhcp_server.htype, Reply#dhcp_server.chaddr, State),
-	    {Reply#dhcp_server.yiaddr, ?DHCP_CLIENT_PORT};
+	    arp_inject(Reply#dhcp_msg.yiaddr, Reply#dhcp_msg.htype, Reply#dhcp_msg.chaddr, State),
+	    {Reply#dhcp_msg.yiaddr, ?DHCP_CLIENT_PORT};
 
        true ->
 	    'Elixir.DHCPServer.Logger':debug("get_dest: #5"),
 	    Source
     end.
 
-optsearch(Option, D) when is_record(D, dhcp_server) ->
-    case lists:keysearch(Option, 1, D#dhcp_server.options) of
+optsearch(Option, D) when is_record(D, dhcp_msg) ->
+    case lists:keysearch(Option, 1, D#dhcp_msg.options) of
 	{value, {Option, Value}} ->
 	    {value, Value};
 	false ->
 	    false
     end.
 
-get_client_id(D) when is_record(D, dhcp_server) ->
+get_client_id(D) when is_record(D, dhcp_msg) ->
     case optsearch(?DHO_DHCP_CLIENT_IDENTIFIER, D) of
         {value, ClientId} ->
 	    ClientId;
 	false ->
-	    D#dhcp_server.chaddr
+	    D#dhcp_msg.chaddr
     end.
 
-get_requested_ip(D) when is_record(D, dhcp_server) ->
+get_requested_ip(D) when is_record(D, dhcp_msg) ->
     case optsearch(?DHO_DHCP_REQUESTED_ADDRESS, D) of
         {value, IP} ->
 	    IP;
@@ -358,22 +358,24 @@ get_requested_ip(D) when is_record(D, dhcp_server) ->
 	    ?INADDR_ANY
     end.
 
-fmt_clientid(D) when is_record(D, dhcp_server) ->
-    fmt_clientid(get_client_id(D));
-fmt_clientid([_T, E1, E2, E3, E4, E5, E6]) ->
-    fmt_clientid({E1, E2, E3, E4, E5, E6});
+fmt_clientid(D) when is_record(D, dhcp_msg) -> fmt_clientid(get_client_id(D));
+
+fmt_clientid([_T, E1, E2, E3, E4, E5, E6]) -> fmt_clientid({E1, E2, E3, E4, E5, E6});
+
+fmt_clientid(_) -> "";
+
 fmt_clientid({E1, E2, E3, E4, E5, E6}) ->
     lists:flatten(
       io_lib:format("~2.16.0b:~2.16.0b:~2.16.0b:~2.16.0b:~2.16.0b:~2.16.0b",
 	     [E1, E2, E3, E4, E5, E6])).
 
-fmt_gateway(D) when is_record(D, dhcp_server) ->
-    case D#dhcp_server.giaddr of
+fmt_gateway(D) when is_record(D, dhcp_msg) ->
+    case D#dhcp_msg.giaddr of
 	?INADDR_ANY -> [];
 	IP          -> lists:flatten(io_lib:format("via ~s", [fmt_ip(IP)]))
     end.
 
-fmt_hostname(D) when is_record(D, dhcp_server) ->
+fmt_hostname(D) when is_record(D, dhcp_msg) ->
     case optsearch(?DHO_HOST_NAME, D) of
         {value, Hostname} ->
             lists:flatten(io_lib:format("(~s)", [Hostname]));

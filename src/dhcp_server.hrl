@@ -16,7 +16,7 @@
 %%% Magic cookie validating dhcp_server options and bootp vendor extensions field
 -define(DHCP_OPTIONS_COOKIE, [99, 130, 83, 99]).
 
--record(dhcp_server, {
+-record(dhcp_msg, {
 	  op,                       %% Message opcode
 	  htype   = ?HTYPE_ETHER,   %% Hardware addr type
 	  hlen    = 6,              %% Hardware addr length
