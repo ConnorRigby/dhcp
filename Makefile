@@ -22,7 +22,10 @@ ifeq ($(CROSSCOMPILE),)
 endif
 
 ifeq ($(ERTS_DIR),)
-  $(error "ERTS_DIR environment variable should point to erlang runtime system root dir.")
+ERTS_DIR = $(shell erl -eval "io:format(\"~s/erts-~s~n\", [code:root_dir(), erlang:system_info(version)])" -s init stop -noshell)
+ifeq ($(ERTS_DIR),)
+   $(error Could not find the Erlang installation. Check to see that 'erl' is in your PATH)
+endif
 endif
 
 # If not cross-compiling, then run sudo by default

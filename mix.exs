@@ -7,9 +7,6 @@ defmodule DHCPServer.Mixfile do
       version: "0.1.0",
       elixir: "~> 1.4",
       compilers: Mix.compilers ++ [:elixir_make],
-      make_env: %{
-        "ERTS_DIR" => "#{:code.root_dir()}/erts-#{:erlang.system_info(:version)}/"
-      },
       package: package(),
       description: description(),
       make_clean: ["clean"],
