@@ -39,7 +39,7 @@ defmodule DHCPServer.Mixfile do
 
   defp package do
     [
-      files: ["lib", "priv", "mix.exs", "README*", "COPYING", "src", "c_src", "Makefile"],
+      files: ["lib", "mix.exs", "README*", "COPYING", "src", "c_src/*.[ch]", "Makefile"],
       maintainers: ["Connor Rigby"],
       licenses: ["GPLv2"],
       links: %{"GitHub" => "https://github.com/nerves-project/dhcp_server"}
