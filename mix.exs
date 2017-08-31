@@ -19,7 +19,7 @@ defmodule DHCPServer.Mixfile do
 
   def application do
     [
-      applications: [:logger, :nerves_network]
+      applications: [:logger]
     ]
   end
 
@@ -27,7 +27,7 @@ defmodule DHCPServer.Mixfile do
     [
       {:elixir_make, "~> 0.4", runtime: false},
       {:ex_doc, "~> 0.14", only: :dev},
-      {:nerves_network, ">= 0.0.0"}
+      {:nerves_network, ">= 0.0.0", [optional: true]}
     ]
   end
 
