@@ -18,7 +18,7 @@
 
 -include("dhcp_server.hrl").
 
--on_load(init/0).
+% -on_load(init/0).
 
 -define(SERVER, ?MODULE).
 -define(DHCP_SERVER_PORT, 67).
@@ -30,17 +30,17 @@
 
 -define(is_broadcast(D), (is_record(D, dhcp_msg) andalso (D#dhcp_msg.flags bsr 15) == 1)).
 
-init() ->
-    LibDir = filename:join([filename:dirname(code:which(?MODULE)), "..", "priv"]),
-
-    %% load our nif library
-    case erlang:load_nif(filename:join(LibDir, "dhcp_server"), 0) of
-        ok -> ok;
-        {error, {reload, _}} -> ok;
-        {error, Error} ->
-            error_logger:error_msg("could not load dhcp_server nif library: ~p", [Error]),
-            error({load_nif, Error})
-    end.
+% init() ->
+%     LibDir = filename:join([filename:dirname(code:which(?MODULE)), "..", "priv"]),
+%
+%     %% load our nif library
+%     case erlang:load_nif(filename:join(LibDir, "dhcp_server"), 0) of
+%         ok -> ok;
+%         {error, {reload, _}} -> ok;
+%         {error, Error} ->
+%             error_logger:error_msg("could not load dhcp_server nif library: ~p", [Error]),
+%             error({load_nif, Error})
+%     end.
 
 %%====================================================================
 %% API
@@ -112,21 +112,18 @@ handle_info({udp, Socket, IP, Port, Packet}, State = #state{socket = Socket}) ->
     Source = {IP, Port},
     Request = dhcp_server_lib:decode(Packet),
     case optsearch(?DHO_DHCP_MESSAGE_TYPE, Request) of
-	{value, MsgType} ->
-	    case handle_dhcp(MsgType, Request, State) of
-		ok ->
-		    ok;
-		{reply, Reply} ->
-		    send_reply(Source, MsgType, Reply, State);
-		{error, Reason} ->
-		    'Elixir.DHCPServer.Logger':debug(Reason);
-		Other ->
-		    'Elixir.DHCPServer.Logger':debug(io_lib:format("DHCP result: ~w", [Other]))
-	    end;
-	false ->
-	    ok
+      {value, MsgType} ->
+        case handle_dhcp(MsgType, Request, State) of
+          ok -> ok;
+          {reply, Reply} -> send_reply(Source, MsgType, Reply, State);
+          {error, Reason} -> 'Elixir.DHCPServer.Logger':debug(Reason);
+          Other ->
+            'Elixir.DHCPServer.Logger':debug(io_lib:format("DHCP result: ~w", [Other]))
+        end;
+	    false -> ok
     end,
     {noreply, State};
+
 handle_info(_Info, State) ->
     {noreply, State}.
 
@@ -167,11 +164,13 @@ handle_dhcp(?DHCPDISCOVER, D, State) ->
 	Other ->
 	    Other
     end;
+
 handle_dhcp(?DHCPREQUEST, D, State) ->
     ClientId = get_client_id(D),
     'Elixir.DHCPServer.Logger':debug(io_lib:format("DHCPREQUEST from ~s ~s ~s",
 			  [fmt_clientid(D), fmt_hostname(D), fmt_gateway(D)])),
     case client_state(D) of
+
 	{selecting, ServerId} ->
 	    case {ServerId, State#state.server_id} of
 		{X, X} ->
@@ -186,6 +185,7 @@ handle_dhcp(?DHCPREQUEST, D, State) ->
 		    %% Client selected someone else, do nothing
 		    ok
 	    end;
+
 	{init_reboot, RequestedIP} ->
 	    Gateway = D#dhcp_msg.giaddr,
 	    case dhcp_server_alloc:verify(ClientId, Gateway, RequestedIP) of
@@ -198,6 +198,7 @@ handle_dhcp(?DHCPREQUEST, D, State) ->
 		{error, Reason} ->
 		    nak(D, Reason, State)
 	    end;
+
 	{ClientIs, IP} when ClientIs == renewing; ClientIs == rebinding ->
 	    case dhcp_server_alloc:extend(ClientId, IP) of
 		{ok, IP, Options} ->
@@ -206,17 +207,20 @@ handle_dhcp(?DHCPREQUEST, D, State) ->
 		    nak(D, Reason, State)
 	    end
     end;
+
 handle_dhcp(?DHCPDECLINE, D, _State) ->
     IP = get_requested_ip(D),
     'Elixir.DHCPServer.Logger':debug(io_lib:format("DHCPDECLINE of ~s from ~s ~s",
 			  [fmt_ip(IP), fmt_clientid(D), fmt_hostname(D)])),
     dhcp_server_alloc:decline(IP);
+
 handle_dhcp(?DHCPRELEASE, D, _State) ->
     ClientId = get_client_id(D),
     'Elixir.DHCPServer.Logger':debug(io_lib:format("DHCPRELEASE of ~s from ~s ~s ~s",
 			  [fmt_ip(D#dhcp_msg.ciaddr), fmt_clientid(D),
 			   fmt_hostname(D), fmt_gateway(D)])),
     dhcp_server_alloc:release(ClientId, D#dhcp_msg.ciaddr);
+
 handle_dhcp(?DHCPINFORM, D, State) ->
     Gateway = D#dhcp_msg.giaddr,
     IP = D#dhcp_msg.ciaddr,
@@ -229,6 +233,7 @@ handle_dhcp(?DHCPINFORM, D, State) ->
 	Other ->
 	    Other
     end;
+
 handle_dhcp(MsgType, _D, _State) ->
     'Elixir.DHCPServer.Logger':debug(io_lib:format("Invalid DHCP message type ~p", [MsgType])),
     ok.
