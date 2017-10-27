@@ -61,7 +61,8 @@ defmodule DHCPServer do
   defp parse_config(opts, interface) do
     # Raise an argument error here if not supplied.
     authoritative  = get_config(opts, :authoritative)
-    lease_file     = get_config(opts, :lease_file) |> to_charlist
+    lease_file     = '/var/run/dhcp_leases_#{interface}.dets'
+    # lease_file     = get_config(opts, :lease_file) |> to_charlist
     lease_time     = get_config(opts, :lease_time)
 
     gateway        = get_config(opts, :gateway)
