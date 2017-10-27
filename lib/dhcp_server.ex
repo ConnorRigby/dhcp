@@ -10,7 +10,6 @@ defmodule DHCPServer do
 
   @default [
     authoritative: true,
-    lease_file: "/var/run/dhcp_leases.dets",
     lease_time: 3600,
     gateway: "192.168.24.1",
     netmask: "255.255.255.0",
@@ -24,7 +23,7 @@ defmodule DHCPServer do
     * A linux network interface name.
   # config
     * `authoritative`  - default: `#{@default[:authoritative]}`.
-    * `lease_file`     - default: `#{@default[:lease_file]}`.
+    * `lease_file`     - default: `"/var/run/dhcp_leases_<interface>.dets"`.
     * `lease_time`     - default: `#{@default[:lease_time]}`.
     * `gateway`        - default: `#{@default[:gateway]}`.
     * `netmask`        - default: `#{@default[:netmask]}`.
@@ -50,7 +49,7 @@ defmodule DHCPServer do
 
     children = [
       worker(DHCPServer.Server,  [net_name_space, interface, server_id, next_server]),
-      worker(:dhcp_server_alloc,  [interface, lease_file, subnets, hosts]),
+      worker(:dhcp_server_alloc, [interface, lease_file, subnets, hosts]),
       worker(DHCPServer.Worker,  [opts])
     ]
     supervise(children, [strategy: :one_for_one])
@@ -61,8 +60,7 @@ defmodule DHCPServer do
   defp parse_config(opts, interface) do
     # Raise an argument error here if not supplied.
     authoritative  = get_config(opts, :authoritative)
-    lease_file     = '/var/run/dhcp_leases_#{interface}.dets'
-    # lease_file     = get_config(opts, :lease_file) |> to_charlist
+    lease_file     = Keyword.get(opts, :lease_file, '/var/run/dhcp_leases_#{interface}.dets')
     lease_time     = get_config(opts, :lease_time)
 
     gateway        = get_config(opts, :gateway)

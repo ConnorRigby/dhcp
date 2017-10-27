@@ -7,7 +7,7 @@ defmodule  DHCPServer.Worker do
   else
     IO.warn """
     DHCPServer will not setup or tear down network interfaces.
-    If you would like it to add:
+    If you would like it to, add:
 
           {:nerves_network, ">= 0.0.0"}
 

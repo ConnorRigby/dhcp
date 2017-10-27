@@ -1,5 +1,5 @@
 defmodule DHCPServer.Server do
-  @moduledoc "Replacement for `:dhcp_server` module."
+  @moduledoc "Handles the  UDP connection."
 
   use GenServer
   require Logger
@@ -25,6 +25,7 @@ defmodule DHCPServer.Server do
     defstruct [:ifname, :socket, :server_id, :next_server]
   end
 
+  @doc "Start the DHCP Server."
   def start_link(net_name_space, interface, server_id, next_server) do
     GenServer.start_link(__MODULE__, [net_name_space, interface, server_id, next_server])
   end
