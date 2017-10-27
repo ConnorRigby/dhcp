@@ -10,9 +10,12 @@
 %% API
 -export([decode/1, encode/1]).
 -export([ip_to_binary/1, eth_to_binary/1]).
+-export([empty/0]).
 -import(lists, [keymember/3, keysearch/3, keyreplace/4]).
 -include("dhcp_server.hrl").
 
+empty() ->
+  #dhcp_msg{}.
 %%====================================================================
 %% API
 %%====================================================================

@@ -6,7 +6,7 @@ defmodule DHCPServer.Mixfile do
       app: :dhcp_server,
       version: "0.1.3",
       elixir: "~> 1.4",
-      compilers: Mix.compilers ++ [:elixir_make],
+      compilers: [:elixir_make] ++ Mix.compilers,
       package: package(),
       description: description(),
       make_clean: ["clean"],

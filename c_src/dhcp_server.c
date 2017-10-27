@@ -85,4 +85,4 @@ static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info)
 	return 0;
 }
 
-ERL_NIF_INIT(dhcp_server, nif_funcs, load, NULL, NULL, NULL)
+ERL_NIF_INIT(Elixir.DHCPServer.Server, nif_funcs, load, NULL, NULL, NULL)
