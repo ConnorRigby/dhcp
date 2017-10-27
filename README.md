@@ -6,14 +6,14 @@ The package can be installed by adding `dhcp_server` to your list of dependencie
 
 ```elixir
 def deps do
-  [{:dhcp_server, "~> 0.1.0"}]
+  [{:dhcp_server, "~> 0.2.0"}]
 end
 ```
 
 ## Usage
 
 ```elixir
-iex(1)> {:ok, dhcp_server} = DHCPServer.start_link(interface: "usb0")
+iex(1)> {:ok, dhcp_server} = DHCPServer.start_link("usb0", [])
 {:ok, dhcp_server}
 # Plug device in or something?
 # Get ip address?
