@@ -158,7 +158,7 @@ handle_dhcp(?DHCPDISCOVER, D, State) ->
     ClientId = get_client_id(D),
     Gateway = D#dhcp_msg.giaddr,
     RequestedIP = get_requested_ip(D),
-    case dhcp_server_alloc:reserve(ClientId, Gateway, RequestedIP) of
+    case dhcp_server_alloc:reserve(State#state.if_name, ClientId, Gateway, RequestedIP) of
 	{ok, IP, Options} ->
 	    offer(D, IP, Options, State);
 	Other ->
@@ -175,7 +175,7 @@ handle_dhcp(?DHCPREQUEST, D, State) ->
 	    case {ServerId, State#state.server_id} of
 		{X, X} ->
 		    IP = get_requested_ip(D),
-		    case dhcp_server_alloc:allocate(ClientId, IP) of
+		    case dhcp_server_alloc:allocate(State#state.if_name, ClientId, IP) of
 			{ok, IP, Options} ->
 			    ack(D, IP, Options, State);
 			Other ->
@@ -188,7 +188,7 @@ handle_dhcp(?DHCPREQUEST, D, State) ->
 
 	{init_reboot, RequestedIP} ->
 	    Gateway = D#dhcp_msg.giaddr,
-	    case dhcp_server_alloc:verify(ClientId, Gateway, RequestedIP) of
+	    case dhcp_server_alloc:verify(State#state.if_name, ClientId, Gateway, RequestedIP) of
 		{ok, IP, Options} ->
 		    ack(D, IP, Options, State);
 		noclient ->
@@ -200,7 +200,7 @@ handle_dhcp(?DHCPREQUEST, D, State) ->
 	    end;
 
 	{ClientIs, IP} when ClientIs == renewing; ClientIs == rebinding ->
-	    case dhcp_server_alloc:extend(ClientId, IP) of
+	    case dhcp_server_alloc:extend(State#state.if_name, ClientId, IP) of
 		{ok, IP, Options} ->
 		    ack(D, IP, Options, State);
 		{error, Reason} ->
@@ -208,24 +208,25 @@ handle_dhcp(?DHCPREQUEST, D, State) ->
 	    end
     end;
 
-handle_dhcp(?DHCPDECLINE, D, _State) ->
+handle_dhcp(?DHCPDECLINE, D, State) ->
     IP = get_requested_ip(D),
+    ClientId = get_client_id(D),
     'Elixir.DHCPServer.Logger':debug(io_lib:format("DHCPDECLINE of ~s from ~s ~s",
 			  [fmt_ip(IP), fmt_clientid(D), fmt_hostname(D)])),
-    dhcp_server_alloc:decline(IP);
+    dhcp_server_alloc:decline(State#state.if_name, ClientId, IP);
 
-handle_dhcp(?DHCPRELEASE, D, _State) ->
+handle_dhcp(?DHCPRELEASE, D, State) ->
     ClientId = get_client_id(D),
     'Elixir.DHCPServer.Logger':debug(io_lib:format("DHCPRELEASE of ~s from ~s ~s ~s",
 			  [fmt_ip(D#dhcp_msg.ciaddr), fmt_clientid(D),
 			   fmt_hostname(D), fmt_gateway(D)])),
-    dhcp_server_alloc:release(ClientId, D#dhcp_msg.ciaddr);
+    dhcp_server_alloc:release(State#state.if_name, ClientId, D#dhcp_msg.ciaddr);
 
 handle_dhcp(?DHCPINFORM, D, State) ->
     Gateway = D#dhcp_msg.giaddr,
     IP = D#dhcp_msg.ciaddr,
     'Elixir.DHCPServer.Logger':debug(io_lib:format("DHCPINFORM from ~s", [fmt_ip(IP)])),
-    case dhcp_server_alloc:local_conf(Gateway) of
+    case dhcp_server_alloc:local_conf(State#state.if_name, Gateway) of
 	{ok, Opts} ->
 	    %% No Lease Time (RFC2131 sec. 4.3.5)
 	    OptsSansLease = lists:keydelete(?DHO_DHCP_LEASE_TIME, 1, Opts),

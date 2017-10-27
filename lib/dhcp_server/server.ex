@@ -37,25 +37,27 @@ defmodule DHCPServer.Server do
     end
   end
 
-  def handle_call(_, _, state) do
-    {:reply, :error, state}
-  end
-
   def handle_cast(_msg, state), do: {:noreply, state}
 
   def handle_info({:udp, _socket, ip, port, packet}, %State{} = state) do
     source = {ip, port}
-    request = DHCPServer.Lib.Msg.decode(packet)
+    request = Msg.decode(packet)
     case optsearch(request, @dho_dhcp_message_type) do
       false -> :ok
       {:value, type} ->
         case handle_dhcp(type, request, state) do
           :ok -> {:noreply, state}
-          {:reply, reply} -> nil
+          {:reply, reply} ->
             send_reply(source, type, reply, state)
             {:noreply, state}
+          # {:reply, type, msg, opts, state} ->
+            # send_reply(source, type, msg, state)
+            # {:noreply, state}
           {:error, reason} ->
             {:exit, reason, state}
+          other ->
+            Logger.debug ("DHCP result: #{inspect other}")
+            {:noreply, state}
         end
     end
   end
@@ -73,7 +75,7 @@ defmodule DHCPServer.Server do
     client_id = get_client_id(req)
     gateway = req.giaddr
     requested_ip = get_requested_ip(req)
-    case DHCPServer.Alloc.reserve(state.interface, client_id, gateway, requested_ip) do
+    case :dhcp_server_alloc.reserve(state.ifname, client_id, gateway, requested_ip) do
       {:ok, ip, opts} ->
         offer(req, ip, opts, state)
       other -> other
@@ -91,7 +93,7 @@ defmodule DHCPServer.Server do
         case {server_id, state.server_id} do
           {a, b} when a == b ->
             ip = get_requested_ip(req)
-            case DHCPServer.Alloc.allocate(state.interface, client_id, ip) do
+            case :dhcp_server_alloc.allocate(state.ifname, client_id, ip) do
               {:ok, ip, opts} -> ack(req, ip, opts, state)
               other -> other
             end
@@ -99,7 +101,7 @@ defmodule DHCPServer.Server do
         end
 
       {:init_reboot, requested_ip} ->
-        case DHCPServer.Alloc.verify(state.interface, client_id, gateway, requested_ip) do
+        case :dhcp_server_alloc.verify(state.ifname, client_id, gateway, requested_ip) do
           {:ok, ip, opts} -> ack(req, ip, opts, state)
           {:error, reason} -> nak(req, reason, state)
           :noclient ->
@@ -108,7 +110,7 @@ defmodule DHCPServer.Server do
         end
 
       {client_is, ip} when client_is == :renewing or client_is == :rebinding ->
-        case DHCPServer.Alloc.extend(state.interface, client_id, ip) do
+        case :dhcp_server_alloc.extend(state.ifname, client_id, ip) do
           {:ok, ip, opts}  -> ack(req, ip, opts, state)
           {:error, reason} -> nak(req, reason, state)
         end
@@ -118,21 +120,22 @@ defmodule DHCPServer.Server do
 
   defp handle_dhcp(@dhcpdecline, req, state) do
     ip = get_requested_ip(req)
+    client_id = get_client_id(req)
     Logger.debug "DHCPDECLINE of #{fmt_ip(ip)} from #{fmt_clientid(req)} #{fmt_hostname(req)}"
-    DHCPServer.Alloc.decline(state.interface, ip)
+    :dhcp_server_alloc.decline(state.ifname, client_id, ip)
   end
 
   defp handle_dhcp(@dhcprelease, req, state) do
     client_id = get_client_id(req)
     Logger.debug("DHCPRELEASE of #{fmt_ip(req.ciaddr)} from #{fmt_clientid(req)} #{fmt_hostname(req)} #{fmt_gateway(req)}")
-    DHCPServer.Alloc.release(state.interface, client_id, req.ciaddr)
+    :dhcp_server_alloc.release(state.ifname, client_id, req.ciaddr)
   end
 
   defp handle_dhcp(@dhcpinform, req, state) do
     gateway = req.giaddr
     ip = req.ciaddr
     Logger.debug("DHCPINFORM from #{fmt_ip(ip)}")
-    case DHCPServer.Alloc.local_conf(state.interface, gateway) do
+    case :dhcp_server_alloc.local_conf(state.ifname, gateway) do
       {:ok, opts} ->
         opts_sans_lease = :lists.keydelete(@dho_dhcp_lease_time, 1, opts)
         ack(req, ip, opts_sans_lease, state)
@@ -171,33 +174,32 @@ defmodule DHCPServer.Server do
 
   defp offer(%Msg{} = req, ip, options, %State{next_server: next_server} = state) do
     Logger.debug "DHCPOFFER on #{fmt_ip(ip)} to #{fmt_clientid(req)} #{fmt_hostname(req)} #{fmt_gateway(req)}"
-    {:reply, @dhcpoffer, %Msg{ req |
+    reply @dhcpoffer, %Msg{ req |
       ciaddr: @inaddr_any,
       yiaddr: ip,
       siaddr: next_server
-      }, options, state}
+      }, options, state
   end
 
   defp ack(%Msg{} = req, ip, options, %State{next_server: next_server} = state) do
     Logger.debug "DHCPACK on #{fmt_ip(ip)} to #{fmt_clientid(req)} #{fmt_hostname(req)} #{fmt_gateway(req)}"
-    {:reply, @dhcpack, %Msg{req |
-      siaddr: next_server
-    }, options, state}
+    reply @dhcpack, %Msg{req | yiaddr: ip, siaddr: next_server }, options, state
   end
 
   defp nak(%Msg{} = req, reason, state) do
     Logger.debug "DHCPNAK to #{fmt_clientid(req)} #{fmt_hostname(req)} #{fmt_gateway(req)} #{inspect reason}"
-    {:reply, @dhcpnak, %Msg{req |
+    reply @dhcpnak, %Msg{req |
+      ciaddr: @inaddr_any,
       yiaddr: @inaddr_any,
       siaddr: @inaddr_any,
       flags: Bitwise.bor(req.flags, 0x8000)
-    }, [{@dho_dhcp_message, reason}], state}
+    }, [{@dho_dhcp_message, reason}], state
   end
 
   defp send_reply(source, msg_type, reply, state) do
     {dst_ip, dst_port} = get_dest(source, msg_type, reply, state)
     Logger.debug "sending DHCP Reply to: #{fmt_ip(dst_ip)}:#{dst_port}"
-    :gen_udp.send(state.socket, dst_ip, dst_port, Msg.encode(reply))
+    :ok = :gen_udp.send(state.socket, dst_ip, dst_port, Msg.encode(reply))
   end
 
   defp arp_inject(ip, type, addr, %State{ifname: ifname, socket: socket}) do
@@ -206,7 +208,9 @@ defmodule DHCPServer.Server do
     arp_inject_nif(ifname, Msg.ip_to_binary(ip), type, Msg.eth_to_binary(addr), fd)
   end
 
-  defp get_dest({src_ip, src_port} = source, msg_type, %Msg{} = reply, %State{} = _state) do
+  def arp_inject_nif(_,_, _, _, _), do: {:error, :no_nif}
+
+  defp get_dest({src_ip, src_port} = source, msg_type, %Msg{} = reply, %State{} = state) do
     cond do
       reply.giaddr != @inaddr_any ->
         Logger.debug "get_dest: #1"
@@ -226,6 +230,7 @@ defmodule DHCPServer.Server do
 
       reply.yiaddr != @inaddr_any ->
         Logger.debug "get_dest: #4"
+        arp_inject(reply.yiaddr, reply.htype, reply.chaddr, state)
         {reply.yiaddr, @dhcp_client_port}
 
       true ->
@@ -252,7 +257,7 @@ defmodule DHCPServer.Server do
 
   defp optsearch(%Msg{options: opts}, opt) do
     case :lists.keysearch(opt, 1, opts) do
-      {:value, {^opt, value}} -> value
+      {:value, {^opt, value}} -> {:value, value}
       false -> false
     end
   end

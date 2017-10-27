@@ -119,7 +119,7 @@ defmodule DHCPServer.Lib.Msg do
     {value, t} = case type(tag) do
       :byte ->
         <<1, byte, t :: binary >> = rest
-        byte
+        {byte, t}
 
       :short ->
         <<2, short :: size(16), t :: binary>> = rest
@@ -139,7 +139,7 @@ defmodule DHCPServer.Lib.Msg do
 
       :ip ->
         <<4, a, b, c, d, t :: binary>> = rest
-        {a, b, c, d}
+        {{a, b, c, d}, t}
 
       :iplist ->
         <<n, bin :: size(n)-binary, t :: binary>> = rest
