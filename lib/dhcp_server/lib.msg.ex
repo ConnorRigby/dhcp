@@ -1,4 +1,6 @@
 defmodule DHCPServer.Lib.Msg do
+  @moduledoc "Encode and Decode DHCP data."
+
   use DHCPServer.Lib
 
   defstruct [
@@ -19,6 +21,7 @@ defmodule DHCPServer.Lib.Msg do
     options: []
   ]
 
+  @doc "Decode a DHCP message."
   def decode(<<op, htype, hlen, hops, xid :: size(32), secs :: size(16), flags :: size(16),
     ciaddr  :: binary-size(4),
     yiaddr  :: binary-size(4),
@@ -57,6 +60,7 @@ defmodule DHCPServer.Lib.Msg do
     }
   end
 
+  @doc "Encode a DHCP message."
   def encode(%__MODULE__{
     op: op,
     htype: htype,
@@ -88,27 +92,38 @@ defmodule DHCPServer.Lib.Msg do
   end
 
   # IP <-> Binary conversion.
+
+  @doc "Binary to ip address."
   def binary_to_ip(<<a, b, c, d>>), do: {a, b, c, d}
 
+  @doc "Ip address to binary."
   def ip_to_binary({a, b, c, d}), do: <<a, b, c, d>>
 
   # Eth <> Binary conversion.
+
+  @doc "Binary to eth."
   def binary_to_eth(<<a, b, c, d, e, f>>), do: {a, b, c, d, e, f}
 
+  @doc "Eth to binary."
   def eth_to_binary({a, b, c, d, e, f}), do: <<a, b, c, d, e, f>>
 
   # IPList <> Binary conversion.
+
+  @doc "Binary to iplist."
   def binary_to_iplist(<<a, b, c, d, t :: binary>>), do: [{a, b, c, d} | binary_to_iplist(t)]
 
   def binary_to_iplist(<<>>), do: []
 
   # Shortlist <> Binary conversion.
+
+  @doc "Binary to shortlist."
   def binary_to_shortlist(<<h:: size(16), t :: binary>>) do
     [h | binary_to_shortlist(t)]
   end
 
   def binary_to_shortlist(<<>>), do: []
 
+  @doc "Binary to options."
   def binary_to_options(binary, acc \\ [])
 
   def binary_to_options(<<@dho_end, _ :: binary()>>, acc) do
@@ -156,11 +171,13 @@ defmodule DHCPServer.Lib.Msg do
     binary_to_options(t, [{tag, value} | acc])
   end
 
+  @doc "Options to binary."
   def options_to_binary(opts) do
     l = for {tag, val} <- opts, do: <<(option_to_binary(tag, val)) :: binary>>
     :erlang.list_to_binary(@dhcp_options_cookie ++ l ++ [@dho_end])
   end
 
+  @doc "Single option to binary."
   def option_to_binary(tag, val) do
     case type(tag) do
       :byte -> <<tag, 1, val>>
