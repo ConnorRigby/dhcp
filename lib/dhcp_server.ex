@@ -45,7 +45,6 @@ defmodule DHCPServer do
   def init([interface, config]) do
     opts = config |> parse_config(interface)
     {net_name_space, interface, server_id, next_server, lease_file, subnets, hosts} = :dhcp_server_config.parse_config(opts)
-    {server_impl, opts} = Keyword.pop(opts, :server_impl, :dhcp_server)
 
     children = [
       worker(DHCPServer.Server,  [net_name_space, interface, server_id, next_server]),
