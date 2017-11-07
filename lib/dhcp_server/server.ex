@@ -7,16 +7,16 @@ defmodule DHCPServer.Server do
   alias DHCPServer.Lib.Msg
   require Bitwise
 
-  if Mix.Project.config[:target] == System.get_env("NERVES_TARGET") do
-    @on_load :load_nif
-    @doc false
-    def load_nif do
-      nif_file = :filename.join(:code.priv_dir(:dhcp_server), 'dhcp_server')
-      case :erlang.load_nif(nif_file, 0) do
-        :ok -> :ok
-        {:error, {:reload, _}} -> :ok
-        {:error, reason} -> exit(reason)
-      end
+  @compile {:autoload, false}
+
+  @on_load :load_nif
+  @doc false
+  def load_nif do
+    nif_file = :filename.join(:code.priv_dir(:dhcp_server), 'dhcp_server')
+    case :erlang.load_nif(nif_file, 0) do
+      :ok -> :ok
+      {:error, {:reload, _}} -> :ok
+      {:error, reason} -> Logger.warn "Failed to load nif: #{inspect reason}"
     end
   end
 
