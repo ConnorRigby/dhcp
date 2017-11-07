@@ -106,7 +106,24 @@ defmodule DHCPServer.Server do
       {:init_reboot, requested_ip} ->
         case :dhcp_server_alloc.verify(state.ifname, client_id, gateway, requested_ip) do
           {:ok, ip, opts} -> ack(req, ip, opts, state)
+
           {:error, reason} -> nak(req, reason, state)
+
+          :nolease ->
+            Logger.warn "No lease for #{fmt_ip(requested_ip)}. sending a new one."
+            case :dhcp_server_alloc.reserve(state.ifname, client_id, gateway, requested_ip) do
+              {:ok, _ip, _opts} ->
+                case :dhcp_server_alloc.allocate(state.ifname, client_id, requested_ip) do
+                  {:ok, _ip, _opts} ->
+                    case :dhcp_server_alloc.verify(state.ifname, client_id, gateway, requested_ip) do
+                      {:ok, ip, opts} -> ack(req, ip, opts, state)
+                      other -> other
+                    end
+                  other -> other
+                end
+              other -> other
+            end
+
           :noclient ->
             Logger.warn "Client #{fmt_clientid(req)} has no current bindings."
             :ok
