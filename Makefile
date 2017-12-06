@@ -39,8 +39,8 @@ endif
 
 DEFAULT_TARGETS ?= priv priv/dhcp_server.so
 
-LDFLAGS += -shared -fpic
-CFLAGS ?= -O2 -Wall -fpic -std=c99
+LDFLAGS += -shared -fPIC
+CFLAGS ?= -O2 -Wall -fPIC -std=c99
 
 .PHONY: all clean
 
