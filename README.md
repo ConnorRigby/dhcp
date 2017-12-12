@@ -25,4 +25,4 @@ iex(2)> DHCPServer.stop(dhcp_server)
 
 ## License
 This project is originally located [here](https://github.com/tonyrog/dhcp) and
-is licensed under GPLv2. See [COPYING](COPYING.md) for more details.
+is licensed under GPLv2. See [COPYING](COPYING) for more details.
