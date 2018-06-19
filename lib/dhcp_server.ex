@@ -111,8 +111,11 @@ defmodule DHCPServer do
   end
 
   defp ip(addr_bin) do
-    case String.split(addr_bin, ".") do
-      [a, b, c, d] ->  {String.to_integer(a), String.to_integer(b), String.to_integer(c), String.to_integer(d)}
+    addr_bin
+    |> String.to_charlist()
+    |> :inet.parse_ipv4_address()
+    |> case do
+      {:ok, ip_addr} -> ip_addr
       _ -> raise ArgumentError, "#{addr_bin} is not a valid ip address!"
     end
   end
