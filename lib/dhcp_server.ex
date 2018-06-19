@@ -7,6 +7,7 @@ defmodule DHCPServer do
   """
 
   use Supervisor
+  use Bitwise
 
   @default [
     authoritative: true,
@@ -69,12 +70,16 @@ defmodule DHCPServer do
 
     domain_name    = Keyword.get(opts, :domain_name, default_domain()) |> to_charlist
 
-    {a, b, c, _}   = gateway = ip(gateway)
-    netmask        = ip(netmask)
-    base           = {a, b, c}
-    begin          = validate_ip(begin, base)
-    fin            = validate_ip(fin, base)
-    domain_servers = validate_ip(domain_servers, base)
+    # Convert binary values to IP address tuples.
+    gateway = ip(gateway)
+    netmask = ip(netmask)
+    begin = ip(begin)
+    fin = ip(fin)
+    domain_servers = Enum.each(domain_servers, &ip/1)
+
+    network = get_network(gateway, netmask)
+    broadcast_addr = get_broadcast_addr(network, netmask)
+    validate_range!(begin, fin, network, netmask)
 
     # This is the format that the server expects.
     # I don't know what the random numbers are.
@@ -86,12 +91,12 @@ defmodule DHCPServer do
       {:netns, nil},
 
       {:subnet,
-       {a, b, c, 0},                        #  Network
+       network,                             #  Network
        netmask,                             #  Netmask
        {begin,fin},                         # Range
        [
         {1,  netmask                  },    #  Subnet Mask
-        {28, {a, b, c, 255}           },    #  Broadcast Address
+        {28, broadcast_addr           },    #  Broadcast Address
         {3,  [gateway]                },    #  Routers
         {15, domain_name              },    #  Domain Name
         {6,  domain_servers           },    #  Domain Name Servers
@@ -112,16 +117,27 @@ defmodule DHCPServer do
     end
   end
 
-  defp validate_ip(ip_list, base) when is_list(ip_list) do
-    Enum.map(ip_list, &validate_ip(&1, base))
+  # Gets the network for an IP address given its netmask.
+  defp get_network(ip_addr, netmask)
+  defp get_network({a, b, c, d}, {m_a, m_b, m_c, m_d}) do
+    {a &&& m_a, b &&& m_b, c &&& m_c, d &&& m_d}
   end
 
-  defp validate_ip(addr_bin, {base_a, base_b, base_c} = base) when is_binary(addr_bin) do
-    {addr_a, addr_b, addr_c, _addr_d} = ip_addr = ip(addr_bin)
-    if {addr_a, addr_b, addr_c} == base do
-      ip_addr
-    else
-      raise ArgumentError, "#{addr_bin} does not match base #{base_a}.#{base_b}.#{base_c}.x"
+  # Gets the broadcast address for a network.
+  def get_broadcast_addr(ip_addr, netmask)
+  def get_broadcast_addr({a, b, c, d}, {m_a, m_b, m_c, m_d}) do
+    # Add 256 after a binary NOT as values are not limited to a byte.
+    # (~~~0x(...000000)FF becomes 0x(...111111)00, so adding 256 put it back in
+    # the range)
+    {a ||| (~~~m_a + 256), b ||| (~~~m_b + 256), c ||| (~~~m_c + 256), d ||| (~~~m_d + 256)}
+  end
+
+  def validate_range!(begin, fin, network, netmask) do
+    begin_net = get_network(begin, netmask)
+    fin_net = get_network(fin, netmask)
+
+    unless begin_net === network && fin_net === network do
+      raise ArgumentError, "The DHCP range is not in the same network as the gateway"
     end
   end
 
