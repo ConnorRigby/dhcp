@@ -55,6 +55,15 @@ defmodule DHCPServer do
     supervise(children, [strategy: :one_for_one])
   end
 
+  @doc false
+  def child_spec(opts) do
+    %{
+      id: __MODULE__,
+      start: {__MODULE__, :start_link, opts},
+      type: :supervisor
+    }
+  end
+
   ## Private
 
   defp parse_config(opts, interface) do
