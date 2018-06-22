@@ -75,7 +75,7 @@ defmodule DHCPServer do
     netmask = ip(netmask)
     begin = ip(begin)
     fin = ip(fin)
-    domain_servers = Enum.each(domain_servers, &ip/1)
+    domain_servers = Enum.map(domain_servers, &ip/1)
 
     network = get_network(gateway, netmask)
     broadcast_addr = get_broadcast_addr(network, netmask)
