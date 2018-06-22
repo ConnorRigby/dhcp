@@ -6,12 +6,13 @@ The package can be installed by adding `dhcp_server` to your list of dependencie
 
 ```elixir
 def deps do
-  [{:dhcp_server, "~> 0.2.0"}]
+  [{:dhcp_server, "~> 0.4"}]
 end
 ```
 
 ## Usage
 
+### Start and Stop a  one off server
 ```elixir
 iex(1)> {:ok, dhcp_server} = DHCPServer.start_link("usb0", [])
 {:ok, dhcp_server}
@@ -21,6 +22,25 @@ iex(1)> {:ok, dhcp_server} = DHCPServer.start_link("usb0", [])
 # Profit?
 iex(2)> DHCPServer.stop(dhcp_server)
 :ok
+```
+
+### As part of an application startup
+```elixir
+def start(_type, _args) do
+  dhcp_options = [
+    gateway: "192.168.254.1",
+    netmask: "255.255.255.0",
+    range: {"192.168.254.10", "192.168.254.99"},
+    domain_servers: ["192.168.254.1"]
+  ]
+
+  children = [
+    {DHCPServer, ["eth0", dhcp_options]}
+  ]
+
+  opts = [strategy: :one_for_one, name: MyApp.Supervisor]
+  Supervisor.start_link(children, opts)
+end
 ```
 
 ## License
