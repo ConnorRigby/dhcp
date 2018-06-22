@@ -127,15 +127,15 @@ defmodule DHCPServer do
   end
 
   # Gets the broadcast address for a network.
-  def get_broadcast_addr(ip_addr, netmask)
-  def get_broadcast_addr({a, b, c, d}, {m_a, m_b, m_c, m_d}) do
+  defp get_broadcast_addr(ip_addr, netmask)
+  defp get_broadcast_addr({a, b, c, d}, {m_a, m_b, m_c, m_d}) do
     # Add 256 after a binary NOT as values are not limited to a byte.
     # (~~~0x(...000000)FF becomes 0x(...111111)00, so adding 256 put it back in
     # the range)
     {a ||| (~~~m_a + 256), b ||| (~~~m_b + 256), c ||| (~~~m_c + 256), d ||| (~~~m_d + 256)}
   end
 
-  def validate_range!(begin, fin, network, netmask) do
+  defp validate_range!(begin, fin, network, netmask) do
     begin_net = get_network(begin, netmask)
     fin_net = get_network(fin, netmask)
 
