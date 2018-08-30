@@ -1,4 +1,5 @@
 [![CircleCI](https://circleci.com/gh/FarmBot-Labs/dhcp_server.svg?style=svg)](https://circleci.com/gh/FarmBot-Labs/dhcp_server)
+[![Hex version](https://img.shields.io/hexpm/v/dhcp_server.svg "Hex version")](https://hex.pm/packages/dhcp_server)
 # DHCPServer
 
 ## Installation
