@@ -1,0 +1,34 @@
+version: 2.0
+install_elixir: &install_elixir
+  run:
+    name: Install Elixir
+    command: |
+      wget https://github.com/elixir-lang/elixir/releases/download/v1.6.6/Precompiled.zip
+      unzip -d /usr/local/elixir Precompiled.zip
+      echo 'export PATH=/usr/local/elixir/bin:$PATH' >> $BASH_ENV
+
+jobs:
+  build:
+    docker:
+      - image: nervesproject/nerves_system_br:1.4.2
+    environment:
+      MIX_ENV: test
+      SUDO: true
+      SUDO_ASKPASS: ''
+    steps:
+      - checkout
+      - <<: *install_elixir
+      - restore_cache:
+          keys:
+            - v2-dependency-cache-{{ checksum "mix.lock" }}
+      - run: mix local.hex --force
+      - run: mix local.rebar --force
+      - run: mix deps.get
+      - run: mix deps.compile
+      - run: mix compile
+      - run: mix test
+      - save_cache:
+          key: v2-dependency-cache-{{ checksum "mix.lock" }}
+          paths:
+            - _build
+            - deps

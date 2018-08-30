@@ -1,3 +1,4 @@
+[![CircleCI](https://circleci.com/gh/FarmBot-Labs/dhcp_server.svg?style=svg)](https://circleci.com/gh/FarmBot-Labs/dhcp_server)
 # DHCPServer
 
 ## Installation
@@ -6,7 +7,7 @@ The package can be installed by adding `dhcp_server` to your list of dependencie
 
 ```elixir
 def deps do
-  [{:dhcp_server, "~> 0.4"}]
+  [{:dhcp_server, "~> 0.5"}]
 end
 ```
 

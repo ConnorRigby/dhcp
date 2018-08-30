@@ -28,14 +28,6 @@ ifeq ($(ERTS_DIR),)
 endif
 endif
 
-# If not cross-compiling, then run sudo by default
-ifeq ($(origin CROSSCOMPILE), undefined)
-	SUDO_ASKPASS ?= /usr/bin/ssh-askpass
-	SUDO ?= sudo
-	else
-	# If cross-compiling, then permissions need to be set some build system-dependent way
-	SUDO ?= true
-endif
 
 DEFAULT_TARGETS ?= priv priv/dhcp_server.so
 
@@ -54,7 +46,6 @@ priv:
 
 priv/dhcp_server.so: c_src/dhcp_server.o
 	$(CC) $^ $(ERL_LDFLAGS) $(LDFLAGS) -o $@
-	SUDO_ASKPASS=$(SUDO_ASKPASS) $(SUDO) -- sh -c 'chown root:root $@; chmod +s $@'
 
 clean:
 	rm -f priv/dhcp_server.* c_src/*.o
