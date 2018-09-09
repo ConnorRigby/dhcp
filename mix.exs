@@ -27,7 +27,6 @@ defmodule DHCPServer.Mixfile do
     [
       {:elixir_make, "~> 0.4", runtime: false},
       {:ex_doc, "~> 0.18.4", only: :dev},
-      {:nerves_network, "~> 0.3", optional: true}
     ]
   end
 

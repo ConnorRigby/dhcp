@@ -51,8 +51,7 @@ defmodule DHCPServer do
 
     children = [
       worker(DHCPServer.Server, [net_name_space, interface, server_id, next_server]),
-      worker(:dhcp_server_alloc, [interface, lease_file, subnets, hosts]),
-      worker(DHCPServer.Worker, [opts])
+      worker(:dhcp_server_alloc, [interface, lease_file, subnets, hosts])
     ]
 
     supervise(children, strategy: :one_for_one)
