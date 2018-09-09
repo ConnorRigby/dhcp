@@ -15,7 +15,7 @@ defmodule DHCPServer do
     gateway: "192.168.24.1",
     netmask: "255.255.255.0",
     range: {"192.168.24.2", "192.168.24.100"},
-    domain_servers: ["192.168.24.1"],
+    domain_servers: ["192.168.24.1"]
   ]
 
   @doc """
@@ -28,12 +28,12 @@ defmodule DHCPServer do
     * `lease_time`     - default: `#{@default[:lease_time]}`.
     * `gateway`        - default: `#{@default[:gateway]}`.
     * `netmask`        - default: `#{@default[:netmask]}`.
-    * `range`          - default: `#{inspect @default[:range]}`.
-    * `domain_servers` - default: `#{inspect @default[:domain_servers]}`.
+    * `range`          - default: `#{inspect(@default[:range])}`.
+    * `domain_servers` - default: `#{inspect(@default[:domain_servers])}`.
     * `domain_name`    - default: `"node()"`.
   """
   def start_link(interface, config) do
-    Supervisor.start_link(__MODULE__, [interface, config], [name: :"#{__MODULE__}-#{interface}"])
+    Supervisor.start_link(__MODULE__, [interface, config], name: :"#{__MODULE__}-#{interface}")
   end
 
   @doc "stop a dhcp server."
@@ -45,14 +45,17 @@ defmodule DHCPServer do
 
   def init([interface, config]) do
     opts = config |> parse_config(interface)
-    {net_name_space, interface, server_id, next_server, lease_file, subnets, hosts} = :dhcp_server_config.parse_config(opts)
+
+    {net_name_space, interface, server_id, next_server, lease_file, subnets, hosts} =
+      :dhcp_server_config.parse_config(opts)
 
     children = [
-      worker(DHCPServer.Server,  [net_name_space, interface, server_id, next_server]),
+      worker(DHCPServer.Server, [net_name_space, interface, server_id, next_server]),
       worker(:dhcp_server_alloc, [interface, lease_file, subnets, hosts]),
-      worker(DHCPServer.Worker,  [opts])
+      worker(DHCPServer.Worker, [opts])
     ]
-    supervise(children, [strategy: :one_for_one])
+
+    supervise(children, strategy: :one_for_one)
   end
 
   @doc false
@@ -68,16 +71,16 @@ defmodule DHCPServer do
 
   defp parse_config(opts, interface) do
     # Raise an argument error here if not supplied.
-    authoritative  = get_config(opts, :authoritative)
-    lease_file     = Keyword.get(opts, :lease_file, '/var/run/dhcp_leases_#{interface}.dets')
-    lease_time     = get_config(opts, :lease_time)
+    authoritative = get_config(opts, :authoritative)
+    lease_file = Keyword.get(opts, :lease_file, '/var/run/dhcp_leases_#{interface}.dets')
+    lease_time = get_config(opts, :lease_time)
 
-    gateway        = get_config(opts, :gateway)
-    netmask        = get_config(opts, :netmask)
-    {begin, fin}   = get_config(opts, :range)
+    gateway = get_config(opts, :gateway)
+    netmask = get_config(opts, :netmask)
+    {begin, fin} = get_config(opts, :range)
     domain_servers = get_config(opts, :domain_servers)
 
-    domain_name    = Keyword.get(opts, :domain_name, default_domain()) |> to_charlist
+    domain_name = Keyword.get(opts, :domain_name, default_domain()) |> to_charlist
 
     # Convert binary values to IP address tuples.
     gateway = ip(gateway)
@@ -98,19 +101,28 @@ defmodule DHCPServer do
       {:authoritative, authoritative},
       {:lease_file, lease_file},
       {:netns, nil},
-
-      {:subnet,
-       network,                             #  Network
-       netmask,                             #  Netmask
-       {begin,fin},                         # Range
-       [
-        {1,  netmask                  },    #  Subnet Mask
-        {28, broadcast_addr           },    #  Broadcast Address
-        {3,  [gateway]                },    #  Routers
-        {15, domain_name              },    #  Domain Name
-        {6,  domain_servers           },    #  Domain Name Servers
-        {51, lease_time               }     #  Address Lease Time
-       ]
+      {
+        :subnet,
+        #  Network
+        network,
+        #  Netmask
+        netmask,
+        # Range
+        {begin, fin},
+        [
+          #  Subnet Mask
+          {1, netmask},
+          #  Broadcast Address
+          {28, broadcast_addr},
+          #  Routers
+          {3, [gateway]},
+          #  Domain Name
+          {15, domain_name},
+          #  Domain Name Servers
+          {6, domain_servers},
+          #  Address Lease Time
+          {51, lease_time}
+        ]
       }
     ]
   end
@@ -131,17 +143,19 @@ defmodule DHCPServer do
 
   # Gets the network for an IP address given its netmask.
   defp get_network(ip_addr, netmask)
+
   defp get_network({a, b, c, d}, {m_a, m_b, m_c, m_d}) do
     {a &&& m_a, b &&& m_b, c &&& m_c, d &&& m_d}
   end
 
   # Gets the broadcast address for a network.
   defp get_broadcast_addr(ip_addr, netmask)
+
   defp get_broadcast_addr({a, b, c, d}, {m_a, m_b, m_c, m_d}) do
     # Add 256 after a binary NOT as values are not limited to a byte.
     # (~~~0x(...000000)FF becomes 0x(...111111)00, so adding 256 put it back in
     # the range)
-    {a ||| (~~~m_a + 256), b ||| (~~~m_b + 256), c ||| (~~~m_c + 256), d ||| (~~~m_d + 256)}
+    {a ||| ~~~m_a + 256, b ||| ~~~m_b + 256, c ||| ~~~m_c + 256, d ||| ~~~m_d + 256}
   end
 
   defp validate_range!(begin, fin, network, netmask) do
@@ -155,10 +169,10 @@ defmodule DHCPServer do
 
   defp default_domain do
     default = node() |> to_string()
+
     case String.split(default, "@") do
       [_, domain] -> "#{domain}.local"
       [domain] -> "#{domain}.local"
     end
   end
-
 end
