@@ -4,15 +4,15 @@ defmodule DHCPServer.Mixfile do
   def project do
     [
       app: :dhcp_server,
-      version: "0.5.0",
+      version: "0.6.0",
       elixir: "~> 1.4",
-      compilers: [:elixir_make] ++ Mix.compilers,
+      compilers: [:elixir_make] ++ Mix.compilers(),
       package: package(),
       description: description(),
       make_clean: ["clean"],
       erlc_options: [{:parse_transform}],
-      build_embedded: Mix.env == :prod,
-      start_permanent: Mix.env == :prod,
+      build_embedded: Mix.env() == :prod,
+      start_permanent: Mix.env() == :prod,
       deps: deps()
     ]
   end
@@ -26,7 +26,7 @@ defmodule DHCPServer.Mixfile do
   def deps do
     [
       {:elixir_make, "~> 0.4", runtime: false},
-      {:ex_doc, "~> 0.18.4", only: :dev},
+      {:ex_doc, "~> 0.18.4", only: :dev}
     ]
   end
 
