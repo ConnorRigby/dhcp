@@ -10,3 +10,5 @@ log
 _build
 deps
 doc
+
+.elixir_ls
