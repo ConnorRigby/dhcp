@@ -45,7 +45,7 @@ priv:
 	mkdir -p priv
 
 priv/dhcp_server.so: c_src/dhcp_server.o
-	$(CC) $^ $(ERL_LDFLAGS) $(LDFLAGS) -o $@
+	$(CC) $(LDFLAGS) $(ERL_LDFLAGS) $^ -o $@
 
 clean:
 	rm -f priv/dhcp_server.* c_src/*.o
