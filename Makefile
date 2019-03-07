@@ -7,6 +7,9 @@
 # ERTS_DIR      Erlang runtime directory.
 # ERL_LDFLAGS   additional linker flags for projects referencing Erlang libraries
 
+PREFIX = $(MIX_COMPILE_PATH)/../priv
+BUILD = $(MIX_COMPILE_PATH)/../obj
+
 # Check that we're on a supported build platform
 ifeq ($(CROSSCOMPILE),)
     # Not crosscompiling, so check that we're on Linux.
@@ -29,7 +32,7 @@ endif
 endif
 
 
-DEFAULT_TARGETS ?= priv priv/dhcp_server.so
+DEFAULT_TARGETS ?= $(PREFIX) $(PREFIX)/dhcp_server.so
 
 LDFLAGS += -shared -fPIC
 CFLAGS ?= -O2 -Wall -fPIC -std=c99
@@ -38,14 +41,15 @@ CFLAGS ?= -O2 -Wall -fPIC -std=c99
 
 all: $(DEFAULT_TARGETS)
 
-c_src/dhcp_server.o:
+$(BUILD)/dhcp_server.o:
 	$(CC) -c $(CFLAGS) -o $@ -I$(ERTS_DIR)/include  c_src/dhcp_server.c
 
-priv:
-	mkdir -p priv
+$(PREFIX):
+	mkdir -p $(BUILD)
+	mkdir -p $(PREFIX)
 
-priv/dhcp_server.so: c_src/dhcp_server.o
+$(PREFIX)/dhcp_server.so: $(BUILD)/dhcp_server.o
 	$(CC) $^ $(ERL_LDFLAGS) $(LDFLAGS) -o $@
 
 clean:
-	rm -f priv/dhcp_server.* c_src/*.o
+	rm -f $(PREFIX)/dhcp_server.* $(BUILD)/*.o
