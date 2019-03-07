@@ -8,7 +8,7 @@ The package can be installed by adding `dhcp_server` to your list of dependencie
 
 ```elixir
 def deps do
-  [{:dhcp_server, "~> 0.5"}]
+  [{:dhcp_server, "~> 0.7"}]
 end
 ```
 
